@@ -1,0 +1,58 @@
+version: '3.3'
+
+networks:
+  laravel:
+
+secrets:
+  db_password:
+    file: ./../db_password.txt
+  db_root_password:
+    file: ./../db_root_password.txt
+
+services:
+  nginex:
+    image: library/nginx:stable-alpine
+    container_name: nginx
+    ports:
+      - "8088:80"
+    volumes:
+      - ./../src:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - mysql
+      - php
+
+    networks:
+      - laravel
+
+  mysql:
+    image: library/mysql:5.7.22
+    container_name: mysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "4306:3306"
+    volumes:
+      - ./../mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_DATABASE: veedu
+      MYSQL_USER: veedu
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_root_password
+      - db_password
+    networks:
+      - laravel
+
+  php:
+    build:
+      context: .
+      dockerfile: phpBuild
+    container_name: php
+    volumes:
+      - ./../src:/var/www/html
+    ports:
+      - "9000:9000"
+    networks:
+      - laravel
